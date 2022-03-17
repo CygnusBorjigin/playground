@@ -1,0 +1,9 @@
+operator := MUL | DIV | PLUS | MINUS
+
+fector := INT | FLOAT
+
+term := fector | MUL (term, term) | DIV (term, term)
+
+expression := term | PLUS (term, term) | MINUS (term, term)
+
+
