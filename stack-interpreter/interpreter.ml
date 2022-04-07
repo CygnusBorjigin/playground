@@ -346,6 +346,13 @@ let rec add_numbers = fun to_add ->
               | Num ele -> ele + (add_numbers t)
               | _ -> 0
 
+let rec sub_number = fun to_sub ->
+  match to_sub with
+  | [] -> 0
+  | h::t -> match h with
+            | Num ele -> ele - sub_number t
+            | _ -> 0 
+
 (* evaluation function *)
 
 let rec evaluation = fun (call_stack: program) (mem : memory) (log : string list) ->
@@ -376,10 +383,20 @@ let rec evaluation = fun (call_stack: program) (mem : memory) (log : string list
                                                                                                               let add_result = add_numbers operation_stack in
                                                                                                               evaluation rest_of_command (Num(add_result)::result_memory) log
                                                                                                             else ([], ["Error"]))
-                                                                        | _ -> ([], ["Error"])
                                                                         )
                                                             | _ -> ([], ["Error"])
                                                             )
+                                          | Sub content -> (let memory_length = count_length mem in
+                                                            match content with
+                                                            | Num 0 -> evaluation rest_of_command (Num(0) :: mem) log
+                                                            | Num ele -> (if memory_length < ele then ([], ["Error"])
+                                                                          else match fetch_for_operation mem [] ele with
+                                                                          | result_memory, operation_stack -> (if only_number operation_stack then
+                                                                                                              let sub_result = sub_number operation_stack in
+                                                                                                              evaluation rest_of_command (Num(sub_result)::result_memory) log
+                                                                                                              else ([], ["Error"]))
+                                                                          )
+                                                            | _ -> ([], ["Error"]))
                                           | _ -> ([], [])
 
 let execute_program = fun src ->
