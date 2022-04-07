@@ -195,12 +195,12 @@ type constant = Num of int
                 | Nothing
 
 type command = Push of constant
-              | Pop of int
-              | Trace of int
-              | Add of int
-              | Sub of int
-              | Mul of int
-              | Div of int
+             | Pop of constant
+             | Trace of constant
+             | Add of constant
+             | Sub of constant
+             | Mul of constant
+             | Div of constant
 
 type program = command list
 
@@ -238,7 +238,66 @@ let rec constant_parser () =
   <|>
   false_parser
 
-let program_parser () =
-  many (constant_parser ())
+(* command parser *)
+let push_parser () : command parser =
+  let* _ = ws in
+  let* _ = keyword "Push" in
+  let* ele = constant_parser () in
+  pure (Push ele)
 
-let parse_code = parse(ws >> constant_parser())
+let pop_parser () : command parser =
+  let* _ = ws in
+  let* _ = keyword "Pop" in
+  let* ele = constant_parser () in
+  pure (Pop ele)
+
+let trace_parser () : command parser = 
+  let* _ = ws in
+  let* _ = keyword "Trace" in
+  let* ele = constant_parser () in
+  pure (Trace ele)
+
+let add_parser () : command parser =
+  let* _ = ws in
+  let* _ = keyword "Add" in
+  let* ele = constant_parser () in
+  pure (Add ele)
+
+let sub_parser () : command parser = 
+  let* _ = ws in
+  let* _ = keyword "Sub" in
+  let* ele = constant_parser () in
+  pure (Sub ele)
+
+let mul_parser () : command parser =
+  let* _ = ws in
+  let* _ = keyword "Mul" in
+  let* ele = constant_parser () in
+  pure (Mul ele)
+
+let div_parser () : command parser = 
+  let* _ = ws in
+  let* _ = keyword "Div" in
+  let* ele = constant_parser () in
+  pure (Div ele)
+
+let rec command_parser () =
+  push_parser ()
+  <|>
+  pop_parser ()
+  <|>
+  trace_parser ()
+  <|>
+  add_parser ()
+  <|>
+  sub_parser ()
+  <|>
+  mul_parser ()
+  <|>
+  div_parser ()
+
+
+let program_parser () =
+  many (command_parser ())
+
+let parse_code = parse(ws >> program_parser())
