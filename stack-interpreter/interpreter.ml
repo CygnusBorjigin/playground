@@ -204,6 +204,8 @@ type command = Push of constant
 
 type program = command list
 
+type memory = constant list
+
 (* Section two: constant parser *)
 let natural : constant parser =
   fun ls ->
@@ -302,9 +304,7 @@ let program_parser () =
 
 let parse_code = parse(ws >> program_parser())
 
-(* evaluation *)
-
-type memory = constant list
+(* evaluation helper function *)
 
 let rec count_length = fun to_count ->
   match to_count with
@@ -326,11 +326,27 @@ let rec trace_element = fun trace_from trace_to number ->
             | Bool ele -> trace_element t (string_of_bool ele :: trace_to) (number - 1)
             | Nothing -> trace_element t ("()" :: trace_to) (number - 1)
 
-let rec fetch_constant = fun memory_stack number accum ->
-  if number == 0 then accum else
-  match memory_stack with
-  | [] -> []
-  | h::t -> fetch_constant t (number - 1) (h :: accum)
+let rec fetch_for_operation = fun memory_stack result_stack number ->
+    if number == 0 then (memory_stack, result_stack) else
+    match memory_stack with
+    | h::t -> fetch_for_operation t (h::result_stack) (number - 1)
+    | _ -> ([], [])
+
+let rec only_number = fun to_check ->
+  match to_check with
+  | [] -> true
+  | h::t -> match h with
+            | Num _ -> only_number t
+            | _ -> false
+
+let rec add_numbers = fun to_add ->
+  match to_add with
+  | [] -> 0
+  | h :: t -> match h with
+              | Num ele -> ele + (add_numbers t)
+              | _ -> 0
+
+(* evaluation function *)
 
 let rec evaluation = fun (call_stack: program) (mem : memory) (log : string list) ->
   match call_stack with
@@ -351,7 +367,19 @@ let rec evaluation = fun (call_stack: program) (mem : memory) (log : string list
                                                                             )
                                                               | _ -> ([], ["Error"])
                                                               )
-
+                                          | Add content -> (let memory_length = count_length mem in
+                                                            match content with
+                                                            | Num 0 -> evaluation rest_of_command (Num(0) :: mem) log
+                                                            | Num ele -> (if memory_length < ele then ([], ["Error"])
+                                                                        else match fetch_for_operation mem [] ele with 
+                                                                        | result_memory, operation_stack -> (if only_number operation_stack then 
+                                                                                                              let add_result = add_numbers operation_stack in
+                                                                                                              evaluation rest_of_command (Num(add_result)::result_memory) log
+                                                                                                            else ([], ["Error"]))
+                                                                        | _ -> ([], ["Error"])
+                                                                        )
+                                                            | _ -> ([], ["Error"])
+                                                            )
                                           | _ -> ([], [])
 
 let execute_program = fun src ->
