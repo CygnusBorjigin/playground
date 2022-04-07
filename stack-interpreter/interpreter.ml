@@ -329,7 +329,7 @@ let rec trace_element = fun trace_from trace_to number ->
 let rec fetch_for_operation = fun memory_stack result_stack number ->
     if number == 0 then (memory_stack, result_stack) else
     match memory_stack with
-    | h::t -> fetch_for_operation t (h::result_stack) (number - 1)
+    | h::t -> fetch_for_operation t (result_stack @ [h]) (number - 1)
     | _ -> ([], [])
 
 let rec only_number = fun to_check ->
@@ -346,12 +346,26 @@ let rec add_numbers = fun to_add ->
               | Num ele -> ele + (add_numbers t)
               | _ -> 0
 
-let rec sub_number = fun to_sub ->
+let rec mul_numbers = fun to_mul ->
+  match to_mul with
+  | [] -> 1
+  | h :: t -> match h with
+              | Num ele -> ele * (mul_numbers t)
+              | _ -> 0
+
+let sub_number = fun to_sub ->
   match to_sub with
   | [] -> 0
   | h::t -> match h with
-            | Num ele -> ele - sub_number t
+            | Num ele -> ele - (add_numbers t)
             | _ -> 0 
+
+let div_number = fun to_div ->
+  match to_div with
+  | [] -> 1
+  | h::t -> match h with
+            | Num ele -> if mul_numbers t == 0 then -1 else ele / (mul_numbers t)
+            | _ -> -1
 
 (* evaluation function *)
 
@@ -396,6 +410,29 @@ let rec evaluation = fun (call_stack: program) (mem : memory) (log : string list
                                                                                                               evaluation rest_of_command (Num(sub_result)::result_memory) log
                                                                                                               else ([], ["Error"]))
                                                                           )
+                                                            | _ -> ([], ["Error"]))
+                                          | Mul content -> (let memory_length = count_length mem in
+                                                            match content with
+                                                            | Num 0 -> evaluation rest_of_command (Num(0) :: mem) log
+                                                            | Num ele -> (if memory_length < ele then ([], ["Error"])
+                                                                          else match fetch_for_operation mem [] ele with 
+                                                                            | result_memory, operation_stack -> (if only_number operation_stack then 
+                                                                                                                   let mul_result = mul_numbers operation_stack in
+                                                                                                                   evaluation rest_of_command (Num(mul_result)::result_memory) log
+                                                                                                                 else ([], ["Error"]))
+                                                                         )
+                                                            | _ -> ([], ["Error"]))
+                                          | Div content -> (let memory_length = count_length mem in
+                                                            match content with
+                                                            | Num 0 -> evaluation rest_of_command (Num(0) :: mem) log
+                                                            | Num ele -> (if memory_length < ele then ([], ["Error"])
+                                                                          else match fetch_for_operation mem [] ele with 
+                                                                            | result_memory, operation_stack -> (if only_number operation_stack then 
+                                                                                                                   let div_result = div_number operation_stack in
+                                                                                                                   if div_result == -1 then ([], ["Error"]) else 
+                                                                                                                   evaluation rest_of_command (Num(div_result)::result_memory) log
+                                                                                                                 else ([], ["Error"]))
+                                                                         )
                                                             | _ -> ([], ["Error"]))
                                           | _ -> ([], [])
 
