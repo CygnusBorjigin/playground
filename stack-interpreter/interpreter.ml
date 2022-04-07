@@ -204,3 +204,41 @@ type command = Push of constant
 
 type program = command list
 
+(* Section two: constant parser *)
+let natural : constant parser =
+  fun ls ->
+  match many1 digit ls with
+  | Some (xs, ls) ->
+    Some (Num(int_of_string (implode xs)), ls)
+  | _ -> None
+
+let num_parser : constant parser =
+  let* ele = natural in
+  pure (ele)
+
+let nothing_parser : constant parser =
+  let* _ = char '(' in
+  let* _ = char ')' in
+  pure (Nothing)
+
+let true_parser : constant parser =
+  let* _ = keyword "True" in
+  pure (Bool (true))
+
+let false_parser : constant parser =
+  let* _ = keyword "False" in
+  pure (Bool(false))
+
+let rec constant_parser () = 
+  num_parser
+  <|>
+  nothing_parser
+  <|>
+  true_parser
+  <|>
+  false_parser
+
+let program_parser () =
+  many (constant_parser ())
+
+let parse_code = parse(ws >> constant_parser())
