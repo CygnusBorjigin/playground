@@ -301,3 +301,46 @@ let program_parser () =
   many (command_parser ())
 
 let parse_code = parse(ws >> program_parser())
+
+(* evaluation *)
+
+type memory = constant list
+
+let rec count_length = fun to_count ->
+  match to_count with
+  | [] -> 0
+  | h::t -> 1 + count_length t
+
+let rec pop_element = fun to_pop number ->
+  if number == 0 then to_pop else
+  match to_pop with
+  | [] -> []
+  | h::t -> pop_element t (number - 1)
+
+let rec fetch_constant = fun memory_stack number accum ->
+  if number == 0 then accum else
+  match memory_stack with
+  | [] -> []
+  | h::t -> fetch_constant t (number - 1) (h :: accum)
+
+let rec evaluation = fun (call_stack: program) (mem : memory) (log : string list) ->
+  match call_stack with
+  | [] -> (mem, log)
+  | current_command :: rest_of_command -> match current_command with
+                                          | Push content -> evaluation rest_of_command (content :: mem) log
+                                          | Pop content -> (let memory_length = count_length mem in
+                                                            match content with
+                                                            | Num ele -> if memory_length < ele then ([], ["Error"]) 
+                                                                          else evaluation rest_of_command (pop_element mem ele) log
+                                                            | _ -> ([], ["Error"])
+                                                            )
+
+                                          | _ -> ([], [])
+
+let execute_program = fun src ->
+  let parse_result = parse_code src in
+  match parse_result with
+  | None -> ([], ["Error"])
+  | Some(command_list, errors) -> match errors with
+                                  | [] -> evaluation command_list [] []
+                                  | _ -> ([], ["Error"])
