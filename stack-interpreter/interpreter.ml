@@ -317,6 +317,15 @@ let rec pop_element = fun to_pop number ->
   | [] -> []
   | h::t -> pop_element t (number - 1)
 
+let rec trace_element = fun trace_from trace_to number ->
+  if number == 0 then (trace_from, trace_to) else
+  match trace_from with
+  | [] -> ([], [])
+  | h::t -> match h with
+            | Num ele -> trace_element t (string_of_int ele :: trace_to) (number - 1)
+            | Bool ele -> trace_element t (string_of_bool ele :: trace_to) (number - 1)
+            | Nothing -> trace_element t ("()" :: trace_to) (number - 1)
+
 let rec fetch_constant = fun memory_stack number accum ->
   if number == 0 then accum else
   match memory_stack with
@@ -334,6 +343,14 @@ let rec evaluation = fun (call_stack: program) (mem : memory) (log : string list
                                                                           else evaluation rest_of_command (pop_element mem ele) log
                                                             | _ -> ([], ["Error"])
                                                             )
+                                          | Trace content -> (let memory_length = count_length mem in
+                                                              match content with
+                                                              | Num ele -> (if memory_length < ele then ([], ["Error"])
+                                                                            else match trace_element mem log ele with
+                                                                            | mem_after, log_after -> evaluation rest_of_command mem_after log_after
+                                                                            )
+                                                              | _ -> ([], ["Error"])
+                                                              )
 
                                           | _ -> ([], [])
 
