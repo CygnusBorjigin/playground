@@ -184,12 +184,28 @@ let keyword (s : string) : unit parser = literal s >> ws >| ()
 type const = 
   | B of bool
   | I of int
+  | N of string
   | Unit
 
-type comm = Push of const | Pop of const | Trace of const
-          | Add of const | Sub of const | Mul of const | Div of const
+type comm = Push of const 
+          | Pop of const 
+          | Trace of const
+          | Add of const 
+          | Sub of const 
+          | Mul of const 
+          | Div of const
+          | And
+          | Or
+          | Not
+          | Equal
+          | Lte
+          | Local
+          | Global
+          | Lookup
+          | Closure of commands
+          | Conditional of (commands * commands)
 
-type commands = comm list
+and commands = comm list
 
 type stack = const list
       
