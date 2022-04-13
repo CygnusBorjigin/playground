@@ -563,6 +563,10 @@ let rec eval = fun (progs: program) (stack : stack) (log : string list) (disk: e
               | Bool ele1 :: Bool ele2 :: rest_stack -> eval tl (Bool (ele1 && ele2) :: rest_stack) log disk
               | _ -> ([], ["Error"])
               )
+    | Or -> (match stack with
+              | Bool ele1 :: Bool ele2 :: rest_stack -> eval tl (Bool (ele1 || ele2) :: rest_stack) log disk
+              | _ -> ([], ["Error"])
+              )
     | _ -> ([], ["Incomplete"])
 
 let compute = fun x ->
