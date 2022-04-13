@@ -1,26 +1,36 @@
-(* parsing util functions *)
+(* util functions *)
 
-let is_lower_case c = 'a' <= c && c <= 'z'
+let is_lower_case c =
+  'a' <= c && c <= 'z'
 
-let is_upper_case c = 'A' <= c && c <= 'Z'
+let is_upper_case c =
+  'A' <= c && c <= 'Z'
 
-let is_alpha c = is_lower_case c || is_upper_case c
+let is_alpha c =
+  is_lower_case c || is_upper_case c
 
-let is_digit c = '0' <= c && c <= '9'
+let is_digit c =
+  '0' <= c && c <= '9'
 
-let is_alphanum c = is_lower_case c || is_upper_case c || is_digit c
+let is_alphanum c =
+  is_lower_case c ||
+  is_upper_case c ||
+  is_digit c
 
-let is_blank c = String.contains " \012\n\r\t" c
+let is_blank c =
+  String.contains " \012\n\r\t" c
 
-let explode s = List.of_seq (String.to_seq s)
+let explode s =
+  List.of_seq (String.to_seq s)
 
-let implode ls = String.of_seq (List.to_seq ls)
+let implode ls =
+  String.of_seq (List.to_seq ls)
 
 let readlines (file : string) : string =
   let fp = open_in file in
   let rec loop () =
     match input_line fp with
-    | s -> s ^ "\n" ^ loop ()
+    | s -> s ^ "\n" ^ (loop ())
     | exception End_of_file -> ""
   in
   let res = loop () in
@@ -33,178 +43,177 @@ let readlines (file : string) : string =
 
 type 'a parser = char list -> ('a * char list) option
 
-let parse (p : 'a parser) (s : string) : ('a * char list) option = p (explode s)
+let parse (p : 'a parser) (s : string) : ('a * char list) option =
+  p (explode s)
 
-let pure (x : 'a) : 'a parser = fun ls -> Some (x, ls)
+let pure (x : 'a) : 'a parser =
+  fun ls -> Some (x, ls)
 
 let fail : 'a parser = fun ls -> None
 
 let bind (p : 'a parser) (q : 'a -> 'b parser) : 'b parser =
   fun ls ->
-    match p ls with
-    | Some (a, ls) -> q a ls
-    | None -> None
+  match p ls with
+  | Some (a, ls) -> q a ls
+  | None -> None
 
-let ( >>= ) = bind
-
-let ( let* ) = bind
+let (>>=) = bind
+let (let*) = bind
 
 let read : char parser =
   fun ls ->
-    match ls with
-    | x :: ls -> Some (x, ls)
-    | _ -> None
+  match ls with
+  | x :: ls -> Some (x, ls)
+  | _ -> None
 
 let satisfy (f : char -> bool) : char parser =
   fun ls ->
-    match ls with
-    | x :: ls ->
-        if f x then
-          Some (x, ls)
-        else
-          None
-    | _ -> None
+  match ls with
+  | x :: ls ->
+    if f x then Some (x, ls)
+    else None
+  | _ -> None
 
-let char (c : char) : char parser = satisfy (fun x -> x = c)
+let char (c : char) : char parser =
+  satisfy (fun x -> x = c)
 
 let seq (p1 : 'a parser) (p2 : 'b parser) : 'b parser =
   fun ls ->
-    match p1 ls with
-    | Some (_, ls) -> p2 ls
-    | None -> None
+  match p1 ls with
+  | Some (_, ls) -> p2 ls
+  | None -> None
 
-let ( >> ) = seq
+let (>>) = seq
 
 let seq' (p1 : 'a parser) (p2 : 'b parser) : 'a parser =
   fun ls ->
-    match p1 ls with
-    | Some (x, ls) -> (
-        match p2 ls with
-        | Some (_, ls) -> Some (x, ls)
-        | None -> None)
-    | None -> None
+  match p1 ls with
+  | Some (x, ls) ->
+    (match p2 ls with
+     | Some (_, ls) -> Some (x, ls)
+     | None -> None)
+  | None -> None
 
-let ( << ) = seq'
+let (<<) = seq'
 
 let alt (p1 : 'a parser) (p2 : 'a parser) : 'a parser =
   fun ls ->
-    match p1 ls with
-    | Some (x, ls) -> Some (x, ls)
-    | None -> p2 ls
+  match p1 ls with
+  | Some (x, ls)  -> Some (x, ls)
+  | None -> p2 ls
 
-let ( <|> ) = alt
+let (<|>) = alt
 
 let map (p : 'a parser) (f : 'a -> 'b) : 'b parser =
   fun ls ->
-    match p ls with
-    | Some (a, ls) -> Some (f a, ls)
-    | None -> None
+  match p ls with
+  | Some (a, ls) -> Some (f a, ls)
+  | None -> None
 
-let ( >|= ) = map
+let (>|=) = map
 
-let ( >| ) p c = map p (fun _ -> c)
+let (>|) = fun p c -> map p (fun _ -> c)
 
-let rec many (p : 'a parser) : 'a list parser =
+let rec many (p : 'a parser) : ('a list) parser =
   fun ls ->
-    match p ls with
-    | Some (x, ls) -> (
-        match many p ls with
-        | Some (xs, ls) -> Some (x :: xs, ls)
-        | None -> Some ([ x ], ls))
-    | None -> Some ([], ls)
+  match p ls with
+  | Some (x, ls) ->
+    (match many p ls with
+     | Some (xs, ls) -> Some (x :: xs, ls)
+     | None -> Some (x :: [], ls))
+  | None -> Some ([], ls)
 
-let rec many1 (p : 'a parser) : 'a list parser =
+let rec many1 (p : 'a parser) : ('a list) parser =
   fun ls ->
-    match p ls with
-    | Some (x, ls) -> (
-        match many p ls with
-        | Some (xs, ls) -> Some (x :: xs, ls)
-        | None -> Some ([ x ], ls))
-    | None -> None
+  match p ls with
+  | Some (x, ls) ->
+    (match many p ls with
+     | Some (xs, ls) -> Some (x :: xs, ls)
+     | None -> Some (x :: [], ls))
+  | None -> None
 
-let rec many' (p : unit -> 'a parser) : 'a list parser =
+let rec many' (p : unit -> 'a parser) : ('a list) parser =
   fun ls ->
-    match p () ls with
-    | Some (x, ls) -> (
-        match many' p ls with
-        | Some (xs, ls) -> Some (x :: xs, ls)
-        | None -> Some ([ x ], ls))
-    | None -> Some ([], ls)
+  match p () ls with
+  | Some (x, ls) ->
+    (match many' p ls with
+     | Some (xs, ls) -> Some (x :: xs, ls)
+     | None -> Some (x :: [], ls))
+  | None -> Some ([], ls)
 
-let rec many1' (p : unit -> 'a parser) : 'a list parser =
+let rec many1' (p : unit -> 'a parser) : ('a list) parser =
   fun ls ->
-    match p () ls with
-    | Some (x, ls) -> (
-        match many' p ls with
-        | Some (xs, ls) -> Some (x :: xs, ls)
-        | None -> Some ([ x ], ls))
-    | None -> None
+  match p () ls with
+  | Some (x, ls) ->
+    (match many' p ls with
+     | Some (xs, ls) -> Some (x :: xs, ls)
+     | None -> Some (x :: [], ls))
+  | None -> None
 
 let whitespace : unit parser =
   fun ls ->
-    match ls with
-    | c :: ls ->
-        if String.contains " \012\n\r\t" c then
-          Some ((), ls)
-        else
-          None
-    | _ -> None
+  match ls with
+  | c :: ls ->
+    if String.contains " \012\n\r\t" c
+    then Some ((), ls)
+    else None
+  | _ -> None
 
-let ws : unit parser = many whitespace >| ()
+let ws : unit parser =
+  (many whitespace) >| ()
 
-let ws1 : unit parser = many1 whitespace >| ()
+let ws1 : unit parser =
+  (many1 whitespace) >| ()
 
-let digit : char parser = satisfy is_digit
-
-let natural : int parser =
-  fun ls ->
-    match many1 digit ls with
-    | Some (xs, ls) -> Some (int_of_string (implode xs), ls)
-    | _ -> None
+let digit : char parser =
+  satisfy is_digit
 
 let literal (s : string) : unit parser =
   fun ls ->
-    let cs = explode s in
-    let rec loop cs ls =
-      match (cs, ls) with
-      | [], _ -> Some ((), ls)
-      | c :: cs, x :: xs ->
-          if x = c then
-            loop cs xs
-          else
-            None
-      | _ -> None
-    in
-    loop cs ls
+  let cs = explode s in
+  let rec loop cs ls =
+    match cs, ls with
+    | [], _ -> Some ((), ls)
+    | c :: cs, x :: xs ->
+      if x = c
+      then loop cs xs
+      else None
+    | _ -> None
+  in loop cs ls
 
-let keyword (s : string) : unit parser = literal s >> ws >| ()
+let keyword (s : string) : unit parser =
+  (literal s) >> ws >| ()
 
 (* end of parser combinators *)
+
+(* Interprets a program written in the Part1 Stack Language.
+ * Required by the autograder, do not change its type. *)
 
 (* Section one: define atomic data type *)
 
 type constant = Num of int 
               | Name of string 
               | Nothing
-              | Closure of constant * constant * program * env
               | Bool of bool
+              | Closure of constant * constant * program * env
               
 and command = Push of constant 
-             | Add of constant
+             | Add of constant 
              | Trace of constant
              | Sub of constant
              | Mul of constant
              | Div of constant
+             | Pop of constant
              | And
              | Or
              | Not
              | Equal
              | Lte
-             | Condition of program * program
              | Local
              | Global
+             | Condition of (command list) * (command list)
              | Lookup
-             | BeginEnd of program
+             | Beginend of command list 
 
 and program = command list
 
@@ -250,33 +259,37 @@ let name_parser : constant parser =
   pure (ele)
 
 let true_parser : constant parser =
-  let* _ = ws in
   let* _ = keyword "True" in
   pure (Bool true)
 
 let false_parser : constant parser =
-  let* _ = ws in
   let* _ = keyword "False" in
   pure (Bool false)
 
 let rec constant_parser () =
   int_parser
   <|>
-  name_parser
-  <|>
-  nothing_parser
-  <|>
   true_parser
   <|>
   false_parser
+  <|>
+  name_parser
+  <|>
+  nothing_parser
 
 (* Command parsers *)
- 
- let rec push_parser () : command parser = 
+
+and push_parser () : command parser = 
   let* _ = ws in 
   let* _ = keyword "Push" in
   let* ele = constant_parser () in
   pure (Push ele)
+
+and pop_parser () : command parser = 
+  let* _ = ws in 
+  let* _ = keyword "Pop" in
+  let* ele = constant_parser () in
+  pure (Pop ele)
 
 and add_parser () : command parser =
   let* _ = ws in 
@@ -309,27 +322,37 @@ and div_parser () : command parser =
 and and_parser () : command parser =
   let* _ = ws in
   let* _ = keyword "And" in
-  pure (And)
+  pure And
 
 and or_parser () : command parser =
   let* _ = ws in
   let* _ = keyword "Or" in
-  pure (Or)
+  pure Or
 
 and not_parser () : command parser =
   let* _ = ws in
   let* _ = keyword "Not" in
-  pure (Not)
+  pure Not
 
 and equal_parser () : command parser =
   let* _ = ws in
   let* _ = keyword "Equal" in
-  pure (Equal)
+  pure Equal
 
 and lte_parser () : command parser =
   let* _ = ws in
-  let* _ = keyword "Lte" in
-  pure (Lte)
+  let* _  = keyword "Lte" in
+  pure Lte
+
+and global_parser () : command parser =
+  let* _ = ws in
+  let* _ = keyword "Global" in
+  pure Global
+
+and local_parser () : command parser =
+  let* _ = ws in
+  let* _ = keyword "Local" in
+  pure Local
 
 and trace_parser () : command parser = 
   let* _ = ws in 
@@ -337,16 +360,6 @@ and trace_parser () : command parser =
   let* _ = ws in
   let* ele = constant_parser () in
   pure (Trace ele)
-
-and global_parser () : command parser = 
-  let* _ = ws in
-  let* _ = keyword "Global" in
-  pure (Global)
-
-and local_parser () : command parser = 
-  let* _ = ws in
-  let* _ = keyword "Global" in
-  pure (Local)
 
 and lookup_parser () : command parser =
   let* _ = ws in
@@ -366,17 +379,19 @@ and conditional_parser () : command parser =
   let* _ = keyword "End" in
   pure (Condition(ele1, ele2))
 
-and closure_parser () : command parser =
+and beginend_parser () : command parser =
   let* _ = ws in
   let* _ = keyword "Begin" in
   let* _ = ws in
-  let* ele = command_parser () in
+  let* ele = program_parser () in
   let* _ = ws in
   let* _ = keyword "End" in
-  pure (BeginEnd ele)
+  pure (Beginend ele)
 
 and command_parser () = 
   push_parser ()
+  <|>
+  pop_parser ()
   <|>
   add_parser ()
   <|>
@@ -385,16 +400,6 @@ and command_parser () =
   mul_parser ()
   <|>
   div_parser ()
-  <|>
-  trace_parser ()
-  <|>
-  global_parser ()
-  <|>
-  local_parser ()
-  <|>
-  lookup_parser ()
-  <|>
-  conditional_parser ()
   <|>
   and_parser ()
   <|>
@@ -405,17 +410,30 @@ and command_parser () =
   equal_parser ()
   <|>
   lte_parser ()
+  <|>
+  local_parser ()
+  <|>
+  global_parser ()
+  <|>
+  trace_parser ()
+  <|>
+  lookup_parser ()
+  <|>
+  conditional_parser ()
+  <|>
+  beginend_parser ()
 
 and program_parser () =
   many (command_parser ())
 
 let parse_code = parse(ws >> program_parser ())
-(* let rec pop_helper = fun stack value acc ->
+
+let rec pop_helper = fun stack value acc ->
   if value == 0 then Some((stack, acc)) else 
   match stack with 
   | [] -> None
   | hd::tl -> (match hd with
-              | I _ -> pop_helper tl (value - 1) (acc @ [hd])
+              | Num _ -> pop_helper tl (value - 1) (acc @ [hd])
               | _ -> None
               )
 
@@ -423,35 +441,35 @@ let rec add_helper = fun stack ->
   match stack with
   | [] -> 0
   | hd :: tl -> match hd with
-              | I i -> i + add_helper tl
+              | Num i -> i + add_helper tl
               | _ -> 0
 
 let rec sub_helper = fun stack ->
   match stack with
   | [] -> 0
   | hd :: tl -> match hd with
-                | I i -> i - (add_helper tl)
+                | Num i -> i - (add_helper tl)
                 | _ -> 0
 
 let rec mul_helper = fun stack ->
   match stack with
   | [] -> 1
   | hd :: tl -> match hd with
-                | I i -> mul_helper tl * i
+                | Num i -> mul_helper tl * i
                 | _ -> 1
 
 let rec div_checker = fun stack ->
   match stack with
   | [] -> true
   | hd::tl -> match hd with
-              | I 0 -> false
+              | Num 0 -> false
               | _ -> div_checker tl
 
 let div_helper = fun stack ->
   match stack with
   | [] -> 1
   | hd :: tl -> match hd with
-    | I i -> i / (mul_helper tl)
+    | Num i -> i / (mul_helper tl)
     | _ -> 1
 
 let rec trace_pop_helper = fun stack value acc ->
@@ -464,21 +482,21 @@ let rec trace_helper = fun stack ->
   match stack with
   | [] -> []
   | hd::tl -> match hd with
-              | I value -> trace_helper tl @ [(string_of_int value)]
-              | B value -> (match value with
+              | Num value -> trace_helper tl @ [(string_of_int value)]
+              | Bool value -> (match value with
                           | true -> (trace_helper tl) @ ["True"]
                           | false -> (trace_helper tl) @ ["False"])
-              | Unit ->  (trace_helper tl) @ ["()"]
-              | N value -> (trace_helper tl) @ [value]
+              | Nothing ->  (trace_helper tl) @ ["()"]
+              | Name value -> (trace_helper tl) @ [value]
 (* evaluation function *)
 
-let rec eval = fun (progs: commands) (stack : stack) (log : string list) ->
+let rec eval = fun (progs: program) (stack : stack) (log : string list) ->
   match progs with
   | [] -> (stack, log)
   | hd::tl -> match hd with
     | Push value -> eval tl (value :: stack) log
     | Pop value -> (match value with
-                                  | I i -> (let res = trace_pop_helper stack i [] in
+                                  | Num i -> (let res = trace_pop_helper stack i [] in
                                             match res with
                                             | None -> ([], ["Error"])
                                             | Some(stack_res, pop_res) -> eval tl stack_res log
@@ -486,55 +504,55 @@ let rec eval = fun (progs: commands) (stack : stack) (log : string list) ->
                                   | _ -> ([], ["Error"])
                     )
     | Add value -> (match value with
-                    | I 0 -> eval tl (I 0 :: stack) log
-                    | I i -> (let res = pop_helper stack i [] in
+                    | Num 0 -> eval tl (Num 0 :: stack) log
+                    | Num i -> (let res = pop_helper stack i [] in
                               match res with
                               | None -> ([], ["Error"])
                               | Some(stack_res, pop_res) -> (let add_res = add_helper pop_res in
-                                                              eval tl (I add_res :: stack_res) log
+                                                              eval tl (Num add_res :: stack_res) log
                                                               )
                     )
                     | _ -> ([], ["Error"])
                     )
     | Sub value -> (match value with
-        | I 0 -> eval tl (I 0 :: stack) log
-        | I i -> (let res = pop_helper stack i [] in
+        | Num 0 -> eval tl (Num 0 :: stack) log
+        | Num i -> (let res = pop_helper stack i [] in
                   match res with
                   | None -> ([], ["Error"])
                   | Some(stack_res, pop_res) -> (let sub_res = sub_helper pop_res in
-                                                 eval tl (I sub_res :: stack_res) log
+                                                 eval tl (Num sub_res :: stack_res) log
                                                 )
                  )
         | _ -> ([], ["Error"])
       )
     | Mul value -> (match value with
-        | I 0 -> eval tl (I 1 :: stack) log
-        | I i -> (let res = pop_helper stack i [] in
+        | Num 0 -> eval tl (Num 1 :: stack) log
+        | Num i -> (let res = pop_helper stack i [] in
                   match res with
                   | None -> ([], ["Error"])
                   | Some(stack_res, pop_res) -> (let mul_res = mul_helper pop_res in
-                                                 eval tl (I mul_res :: stack_res) log
+                                                 eval tl (Num mul_res :: stack_res) log
                                                 )
                  )
         | _ -> ([], ["Error"])
       )
     | Div value -> (match value with
-        | I 0 -> eval tl (I 1 :: stack) log
-        | I i -> (let res = pop_helper stack i [] in
+        | Num 0 -> eval tl (Num 1 :: stack) log
+        | Num i -> (let res = pop_helper stack i [] in
                   match res with
                   | None -> ([], ["Error"])
                   | Some(stack_res, pop_res) -> ( match pop_res with
-                      | [] -> eval tl (I 0 :: stack_res) log
+                      | [] -> eval tl (Num 0 :: stack_res) log
                       | h::t -> if div_checker t == false then ([], ["Error"]) else
                                 let div_res = div_helper pop_res in 
-                                eval tl (I div_res :: stack_res) log
+                                eval tl (Num div_res :: stack_res) log
                                 )
                  )
         | _ -> ([], ["Error"])
       )
     
     | Trace value -> (match value with
-                      | I i -> ( let res = trace_pop_helper stack i [] in
+                      | Num i -> ( let res = trace_pop_helper stack i [] in
                                 match res with
                                 | None -> ([], ["Error"])
                                 | Some(stack_res, pop_res) -> eval tl stack_res ((trace_helper pop_res) @ log)
@@ -544,7 +562,7 @@ let rec eval = fun (progs: commands) (stack : stack) (log : string list) ->
     | _ -> ([], ["Incomplete"])
 
 let compute = fun x ->
-  let result = parse_total x in
+  let result = parse_code x in
   match result with
   | None -> ([], ["Error"])
   | Some(x, y) -> eval x [] []
@@ -560,4 +578,4 @@ let rec interp (src : string) : string list =
    This is only used for debugging and will not be used by the gradescope autograder. *)
 let main fname =
   let src = readlines fname in
-  interp src *)
+  interp src 
