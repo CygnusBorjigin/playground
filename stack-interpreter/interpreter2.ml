@@ -490,62 +490,62 @@ let rec trace_helper = fun stack ->
               | Name value -> (trace_helper tl) @ [value]
 (* evaluation function *)
 
-let rec eval = fun (progs: program) (stack : stack) (log : string list) ->
+let rec eval = fun (progs: program) (stack : stack) (log : string list) (disk: env) ->
   match progs with
   | [] -> (stack, log)
   | hd::tl -> match hd with
-    | Push value -> eval tl (value :: stack) log
+    | Push value -> eval tl (value :: stack) log disk
     | Pop value -> (match value with
                                   | Num i -> (let res = trace_pop_helper stack i [] in
                                             match res with
                                             | None -> ([], ["Error"])
-                                            | Some(stack_res, pop_res) -> eval tl stack_res log
+                                            | Some(stack_res, pop_res) -> eval tl stack_res log disk
                                           )
                                   | _ -> ([], ["Error"])
                     )
     | Add value -> (match value with
-                    | Num 0 -> eval tl (Num 0 :: stack) log
+                    | Num 0 -> eval tl (Num 0 :: stack) log disk
                     | Num i -> (let res = pop_helper stack i [] in
                               match res with
                               | None -> ([], ["Error"])
                               | Some(stack_res, pop_res) -> (let add_res = add_helper pop_res in
-                                                              eval tl (Num add_res :: stack_res) log
+                                                              eval tl (Num add_res :: stack_res) log disk
                                                               )
                     )
                     | _ -> ([], ["Error"])
                     )
     | Sub value -> (match value with
-        | Num 0 -> eval tl (Num 0 :: stack) log
+        | Num 0 -> eval tl (Num 0 :: stack) log disk
         | Num i -> (let res = pop_helper stack i [] in
                   match res with
                   | None -> ([], ["Error"])
                   | Some(stack_res, pop_res) -> (let sub_res = sub_helper pop_res in
-                                                 eval tl (Num sub_res :: stack_res) log
+                                                 eval tl (Num sub_res :: stack_res) log disk
                                                 )
                  )
         | _ -> ([], ["Error"])
       )
     | Mul value -> (match value with
-        | Num 0 -> eval tl (Num 1 :: stack) log
+        | Num 0 -> eval tl (Num 1 :: stack) log disk
         | Num i -> (let res = pop_helper stack i [] in
                   match res with
                   | None -> ([], ["Error"])
                   | Some(stack_res, pop_res) -> (let mul_res = mul_helper pop_res in
-                                                 eval tl (Num mul_res :: stack_res) log
+                                                 eval tl (Num mul_res :: stack_res) log disk
                                                 )
                  )
         | _ -> ([], ["Error"])
       )
     | Div value -> (match value with
-        | Num 0 -> eval tl (Num 1 :: stack) log
+        | Num 0 -> eval tl (Num 1 :: stack) log disk
         | Num i -> (let res = pop_helper stack i [] in
                   match res with
                   | None -> ([], ["Error"])
                   | Some(stack_res, pop_res) -> ( match pop_res with
-                      | [] -> eval tl (Num 0 :: stack_res) log
+                      | [] -> eval tl (Num 0 :: stack_res) log disk
                       | h::t -> if div_checker t == false then ([], ["Error"]) else
                                 let div_res = div_helper pop_res in 
-                                eval tl (Num div_res :: stack_res) log
+                                eval tl (Num div_res :: stack_res) log disk
                                 )
                  )
         | _ -> ([], ["Error"])
@@ -555,17 +555,21 @@ let rec eval = fun (progs: program) (stack : stack) (log : string list) ->
                       | Num i -> ( let res = trace_pop_helper stack i [] in
                                 match res with
                                 | None -> ([], ["Error"])
-                                | Some(stack_res, pop_res) -> eval tl stack_res ((trace_helper pop_res) @ log)
+                                | Some(stack_res, pop_res) -> eval tl stack_res ((trace_helper pop_res) @ log) disk
                                 )
                       | _ -> ([], ["Error"])
                       )
+    | And -> (match stack with
+              | Bool ele1 :: Bool ele2 :: rest_stack -> eval tl (Bool (ele1 && ele2) :: rest_stack) log disk
+              | _ -> ([], ["Error"])
+              )
     | _ -> ([], ["Incomplete"])
 
 let compute = fun x ->
   let result = parse_code x in
   match result with
   | None -> ([], ["Error"])
-  | Some(x, y) -> eval x [] []
+  | Some(x, y) -> eval x [] [] []
 
 
 (* TODO *)
