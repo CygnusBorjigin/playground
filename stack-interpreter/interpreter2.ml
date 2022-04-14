@@ -487,111 +487,147 @@ let rec trace_helper = fun stack ->
                           | true -> (trace_helper tl) @ ["True"]
                           | false -> (trace_helper tl) @ ["False"])
               | Nothing ->  (trace_helper tl) @ ["()"]
-              | Name value -> (trace_helper tl) @ [value]
+              | Name value -> (trace_helper tl) @ [value]  
+
+let rec lookup_helper = fun lookfor env ->
+  match env with
+  | [] -> None
+  | h::t -> match h with
+            | (Name v_name, v_value) -> if v_name = lookfor then Some(v_value) else lookup_helper lookfor t
+
 (* evaluation function *)
 
-let rec eval = fun (progs: program) (stack : stack) (log : string list) (disk: env) ->
+let rec eval = fun (progs: program) (stack : stack) (log : string list) (local_disk: env) (global_disk: env) ->
   match progs with
-  | [] -> (stack, log)
+  | [] -> (stack, log, local_disk, global_disk)
   | hd::tl -> match hd with
-    | Push value -> eval tl (value :: stack) log disk
+    | Push value -> eval tl (value :: stack) log local_disk global_disk
     | Pop value -> (match value with
                                   | Num i -> (let res = trace_pop_helper stack i [] in
                                             match res with
-                                            | None -> ([], ["Error"])
-                                            | Some(stack_res, pop_res) -> eval tl stack_res log disk
+                                            | None -> ([], ["Pop_Error_1"], [], [])
+                                            | Some(stack_res, pop_res) -> eval tl stack_res log local_disk global_disk
                                           )
-                                  | _ -> ([], ["Error"])
+                                  | _ -> ([], ["Pop_Error_2"], [], [])
                     )
     | Add value -> (match value with
-                    | Num 0 -> eval tl (Num 0 :: stack) log disk
+                    | Num 0 -> eval tl (Num 0 :: stack) log local_disk global_disk
                     | Num i -> (let res = pop_helper stack i [] in
                               match res with
-                              | None -> ([], ["Error"])
+                              | None -> ([], ["Add_Error_1"], [], [])
                               | Some(stack_res, pop_res) -> (let add_res = add_helper pop_res in
-                                                              eval tl (Num add_res :: stack_res) log disk
+                                                              eval tl (Num add_res :: stack_res) log local_disk global_disk
                                                               )
                     )
-                    | _ -> ([], ["Error"])
+                    | _ -> ([], ["Add_Error_2"], [], [])
                     )
     | Sub value -> (match value with
-        | Num 0 -> eval tl (Num 0 :: stack) log disk
+        | Num 0 -> eval tl (Num 0 :: stack) log local_disk global_disk
         | Num i -> (let res = pop_helper stack i [] in
                   match res with
-                  | None -> ([], ["Error"])
+                  | None -> ([], ["Sub_Error_1"], [], [])
                   | Some(stack_res, pop_res) -> (let sub_res = sub_helper pop_res in
-                                                 eval tl (Num sub_res :: stack_res) log disk
+                                                 eval tl (Num sub_res :: stack_res) log local_disk global_disk
                                                 )
                  )
-        | _ -> ([], ["Error"])
+        | _ -> ([], ["Sub_Error_1"], [], [])
       )
     | Mul value -> (match value with
-        | Num 0 -> eval tl (Num 1 :: stack) log disk
+        | Num 0 -> eval tl (Num 1 :: stack) log local_disk global_disk
         | Num i -> (let res = pop_helper stack i [] in
                   match res with
-                  | None -> ([], ["Error"])
+                  | None -> ([], ["Mul_Error_1"], [], [])
                   | Some(stack_res, pop_res) -> (let mul_res = mul_helper pop_res in
-                                                 eval tl (Num mul_res :: stack_res) log disk
+                                                 eval tl (Num mul_res :: stack_res) log local_disk global_disk
                                                 )
                  )
-        | _ -> ([], ["Error"])
+        | _ -> ([], ["Mul_Error_2"], [], [])
       )
     | Div value -> (match value with
-        | Num 0 -> eval tl (Num 1 :: stack) log disk
+        | Num 0 -> eval tl (Num 1 :: stack) log local_disk global_disk
         | Num i -> (let res = pop_helper stack i [] in
                   match res with
-                  | None -> ([], ["Error"])
+                  | None -> ([], ["Div_Error_1"], [], [])
                   | Some(stack_res, pop_res) -> ( match pop_res with
-                      | [] -> eval tl (Num 0 :: stack_res) log disk
-                      | h::t -> if div_checker t == false then ([], ["Error"]) else
+                      | [] -> eval tl (Num 0 :: stack_res) log local_disk global_disk
+                      | h::t -> if div_checker t == false then ([], ["Div_Error_2"], [], []) else
                                 let div_res = div_helper pop_res in 
-                                eval tl (Num div_res :: stack_res) log disk
+                                eval tl (Num div_res :: stack_res) log local_disk global_disk
                                 )
                  )
-        | _ -> ([], ["Error"])
+        | _ -> ([], ["Div_Error_3"], [], [])
       )
     
     | Trace value -> (match value with
                       | Num i -> ( let res = trace_pop_helper stack i [] in
                                 match res with
-                                | None -> ([], ["Error"])
-                                | Some(stack_res, pop_res) -> eval tl stack_res ((trace_helper pop_res) @ log) disk
+                                | None -> ([], ["Trace_Error_1"], [], [])
+                                | Some(stack_res, pop_res) -> eval tl stack_res ((trace_helper pop_res) @ log) local_disk global_disk
                                 )
-                      | _ -> ([], ["Error"])
+                      | _ -> ([], ["Trace_Error_2"], [], [])
                       )
     | And -> (match stack with
-              | Bool ele1 :: Bool ele2 :: rest_stack -> eval tl (Bool (ele1 && ele2) :: rest_stack) log disk
-              | _ -> ([], ["Error"])
+              | Bool ele1 :: Bool ele2 :: rest_stack -> eval tl (Bool (ele1 && ele2) :: rest_stack) log local_disk global_disk
+              | _ -> ([], ["And_Error"], [], [])
               )
     | Or -> (match stack with
-              | Bool ele1 :: Bool ele2 :: rest_stack -> eval tl (Bool (ele1 || ele2) :: rest_stack) log disk
-              | _ -> ([], ["Error"])
+              | Bool ele1 :: Bool ele2 :: rest_stack -> eval tl (Bool (ele1 || ele2) :: rest_stack) log local_disk global_disk
+              | _ -> ([], ["Or_Error"], [], [])
               )
-    | Not -> (match stack with
-              | Bool ele :: rest_stack -> eval tl (Bool (not ele) :: rest_stack)) log disk
-              | _ -> ([], ["Error"])
     | Equal -> (match stack with
-              | Num ele1 :: Num ele2 :: rest_stack -> eval tl (Bool (ele1 == ele2) :: rest_stack) log disk
-              | _ -> ([], ["Error"])
+              | Num ele1 :: Num ele2 :: rest_stack -> eval tl (Bool (ele1 == ele2) :: rest_stack) log local_disk global_disk
+              | _ -> ([], ["Equal_Error"], [], [])
               )
     | Lte -> (match stack with
-              | Num ele1 :: Num ele2 :: rest_stack -> eval tl (Bool (ele1 <= ele2) :: rest_stack) log disk
-              | _ -> ([], ["Error"])
+              | Num ele1 :: Num ele2 :: rest_stack -> eval tl (Bool (ele1 <= ele2) :: rest_stack) log local_disk global_disk
+              | _ -> ([], ["Lte_Error"], [], [])
               )
-    | _ -> ([], ["Incomplete"])
+    | Local -> (match stack with
+              | Name ele1 :: ele2 :: rest_stack -> eval tl (Nothing :: rest_stack) log ((Name ele1, ele2)::local_disk) global_disk
+              | _ -> ([], ["Local_Error"], [], []))
+    | Global -> (match stack with
+              | Name ele1 :: ele2 :: rest_stack -> eval tl (Nothing :: rest_stack) log local_disk ((Name ele1, ele2) :: global_disk)
+              | _ -> ([], ["Error"], [], []))
+    | Lookup -> (match stack with
+              | Name ele :: rest_stack -> (let value = lookup_helper ele local_disk in
+                                            match value with
+                                            | Some(found) -> eval tl (found :: rest_stack) log local_disk global_disk
+                                            | None -> ( let value_2 = lookup_helper ele global_disk in
+                                                        match value_2 with
+                                                        | Some(found) -> eval tl (found :: rest_stack) log local_disk global_disk
+                                                        | None -> (rest_stack, ["Loopup_Error_1"], local_disk, global_disk)
+                                                      )
+                                            )
+              | _ -> ([], ["Lookup_Error_2"], [], []))
+    | Beginend ele -> ( let result = eval ele [] [] local_disk global_disk in
+                        match result with
+                        | inner_stack_h::inner_stack_t, _, _, inner_global_disk -> eval tl (inner_stack_h :: stack) log local_disk (inner_global_disk @ global_disk)
+                        | _, _, _, _ -> ([], ["Beginend_Error"], [], [])
+
+                      )
+    (* | Condition (if_true, if_false) -> (match stack with
+                                        | Bool true -> ()
+                                        | Bool false -> ()
+                                        | _ ->                                         
+                                        ) *)
+    | Not -> (match stack with
+              | Bool ele :: rest_stack -> eval tl (Bool (not ele) :: rest_stack) log local_disk global_disk
+              | _ -> ([], ["Not_Error"], [], [])
+    )
+    | _ -> ([], ["Incomplete"], [], [])
 
 let compute = fun x ->
   let result = parse_code x in
   match result with
-  | None -> ([], ["Error"])
-  | Some(x, y) -> eval x [] [] []
+  | None -> ([], ["Error"], [], [])
+  | Some(x, y) -> eval x [] [] [] []
 
 
 (* TODO *)
 let rec interp (src : string) : string list = 
   let result = compute src in
   match result with
-  | (stack_final, log_final) -> log_final
+  | (stack_final, log_final, _, _) -> log_final
 
 (* Calling (main "test.txt") will read the file test.txt and run interp on it.
    This is only used for debugging and will not be used by the gradescope autograder. *)
