@@ -514,7 +514,7 @@ let rec eval = fun (progs: program) (stack : stack) (log : string list) (local_d
                     | Num 0 -> eval tl (Num 0 :: stack) log local_disk global_disk
                     | Num i -> (let res = pop_helper stack i [] in
                               match res with
-                              | None -> ([], ["Add_Error_1"], [], [])
+                              | None -> (stack, ["Add_Error_1"], local_disk, global_disk)
                               | Some(stack_res, pop_res) -> (let add_res = add_helper pop_res in
                                                               eval tl (Num add_res :: stack_res) log local_disk global_disk
                                                               )
@@ -605,11 +605,15 @@ let rec eval = fun (progs: program) (stack : stack) (log : string list) (local_d
                         | _, _, _, _ -> ([], ["Beginend_Error"], [], [])
 
                       )
-    (* | Condition (if_true, if_false) -> (match stack with
-                                        | Bool true -> ()
-                                        | Bool false -> ()
-                                        | _ ->                                         
-                                        ) *)
+    | Condition (if_true, if_false) -> (match stack with
+                                        | Bool true :: rest_stack -> (let result = eval if_true rest_stack [] local_disk global_disk in
+                                                        match result with
+                                                        | if_stack, if_log, if_local_disk, if_global_disk -> eval tl if_stack (if_log @ log) (if_local_disk @ local_disk) (if_global_disk @ global_disk))
+                                        | Bool false :: rest_stack -> (let result = eval if_false rest_stack [] local_disk global_disk in 
+                                                        match result with
+                                                        | if_stack, if_log, if_local_disk, if_global_disk -> eval tl if_stack (if_log @ log) (if_local_disk @ local_disk) (if_global_disk @ global_disk))
+                                        | _ ->  (stack, ["Conditional_Error"], local_disk, global_disk)
+                                        ) 
     | Not -> (match stack with
               | Bool ele :: rest_stack -> eval tl (Bool (not ele) :: rest_stack) log local_disk global_disk
               | _ -> ([], ["Not_Error"], [], [])
