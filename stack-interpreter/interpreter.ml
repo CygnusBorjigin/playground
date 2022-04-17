@@ -251,7 +251,8 @@ type constant =
   | Num of int
   | Bool of bool
   | U
-  | Name of string 
+  | Name of string
+  | Closure of (constant * program)
 
 and command = 
   | Push of constant
@@ -271,6 +272,11 @@ and command =
   | Lookup 
   | Bgend of command list
   | Condition of (command list) * (command list)
+  | Function of (constant * constant * program)
+  | Call
+  | TryEnd of program
+  | Case of program
+  | Switch of command list
 
 and program = command list
 and memory = constant list
