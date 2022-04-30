@@ -213,6 +213,9 @@ and command =
   | Condition of (command list) * (command list)
   | Func of constant * constant * program
   | Call
+  | TryE of program
+  | Case of constant * program
+  | Switch of command list
 
 and program = command list
 and memory = constant list
@@ -394,6 +397,33 @@ and function_parser () : command parser =
   let* _ = keyword "End" in
   pure (Func (fName, fArg, fBody))
 
+and try_parser () : command parser =
+  let* _ = ws in
+  let* _ = keyword "Try" in
+  let* _ = ws in
+  let* ele = program_parser () in
+  let* _ = ws in
+  let* _ = keyword "End" in
+  pure (TryE (ele))
+
+and case_parser () : command parser =
+  let* _ = ws in
+  let* _ = keyword "Case" in
+  let* _ = ws in
+  let* case_number = constant_parser () in
+  let* _ = ws in
+  let* case_command = program_parser () in
+  pure (Case (case_number, case_command))
+
+and switch_parser () : command parser =
+  let* _ = ws in
+  let* _ = keyword "Switch" in
+  let* _ = ws in
+  let* cases = many(case_parser ()) in
+  let* _ = ws in
+  let* _ = keyword "End" in
+  pure (Switch cases)
+
 and command_parser () =
   push_parser ()
   <|>
@@ -432,6 +462,10 @@ and command_parser () =
   function_parser ()
   <|>
   call_parser ()
+  <|>
+  try_parser ()
+  <|>
+  switch_parser ()
 
 and program_parser () = 
   many (command_parser ())
@@ -577,6 +611,20 @@ let rec div_checker = fun stack ->
     |Num 0 -> false
     |_ -> div_checker tl
 
+let rec interp_helper = fun ls ->
+    match ls with
+    | [] -> true
+    | h::t -> match h with
+      | "Error" -> false
+      | _ -> interp_helper t
+  
+let rec switch_lookup = fun look_for look_from ->
+  match look_from with
+  | [] -> None
+  | h :: t -> (match h with
+              | Case ( Num (case_number), case_command) -> if case_number = look_for then Some(case_command) else switch_lookup look_for t)
+  
+
 (* evaluation function *)
 
 let rec evaluation = fun (call_stack: program) (local_disk : env) (global_disk : env) (mem : memory) (log : string list) ->
@@ -586,41 +634,41 @@ let rec evaluation = fun (call_stack: program) (local_disk : env) (global_disk :
     | Push content -> evaluation rest_of_command local_disk global_disk  (content :: mem) log
     | Pop content -> (let memory_length = count_length mem in
                       match content with
-                      | Num ele -> if memory_length < ele then ([], local_disk, global_disk, mem, ["pop Error 1"]) 
+                      | Num ele -> if memory_length < ele then ([], local_disk, global_disk, mem, ["Error"]) 
                         else evaluation rest_of_command local_disk global_disk (pop_element mem ele) log
-                      | _ -> ([], local_disk, global_disk, mem, ["pop Error 2"])
+                      | _ -> ([], local_disk, global_disk, mem, ["Error"])
                      )
     | Trace content -> (let memory_length = count_length mem in
                         match content with
-                        | Num ele -> (if memory_length < ele then ([], local_disk, global_disk, mem, ["Trace Error 1"])
+                        | Num ele -> (if memory_length < ele then ([], local_disk, global_disk, mem, ["Error"])
                                       else match trace_element mem log ele with
                                         | mem_after, log_after -> evaluation rest_of_command local_disk global_disk mem_after log_after
                                      )
-                        | _ -> ([], local_disk, global_disk, mem, ["trace Error 2"])
+                        | _ -> ([], local_disk, global_disk, mem, ["Error"])
                        )
     | Add content -> (let memory_length = count_length mem in
                       match content with
                       | Num 0 -> evaluation rest_of_command local_disk global_disk (Num(0) :: mem) log
-                      | Num ele -> (if memory_length < ele then ([], local_disk, global_disk, mem, ["Add Error 1"])
+                      | Num ele -> (if memory_length < ele then ([], local_disk, global_disk, mem, ["Error"])
                                     else match fetch_for_operation mem [] ele with 
                                       | result_memory, operation_stack -> (if only_number operation_stack then 
                                                                              let add_result = add_numbers operation_stack in
                                                                              evaluation rest_of_command local_disk global_disk (Num(add_result)::result_memory) log
-                                                                           else ([], local_disk, global_disk, mem, ["Add Error 2"]))
+                                                                           else ([], local_disk, global_disk, mem, ["Error"]))
                                    )
-                      | _ -> ([], local_disk, global_disk, mem, ["Add Error 3"])
+                      | _ -> ([], local_disk, global_disk, mem, ["Error"])
                      )
     | Sub content -> (let memory_length = count_length mem in
                       match content with
                       | Num 0 -> evaluation rest_of_command local_disk global_disk (Num(0) :: mem) log
-                      | Num ele -> (if memory_length < ele then ([], local_disk, global_disk, mem, ["Sub Error 1"])
+                      | Num ele -> (if memory_length < ele then ([], local_disk, global_disk, mem, ["Error"])
                                     else match fetch_for_operation mem [] ele with
                                       | result_memory, operation_stack -> (if only_number operation_stack then
                                                                              let sub_result = sub_number operation_stack in
                                                                              evaluation rest_of_command local_disk global_disk (Num(sub_result)::result_memory) log
-                                                                           else ([], local_disk, global_disk, mem, ["Sub Error 2"]))
+                                                                           else ([], local_disk, global_disk, mem, ["Error"]))
                                    )
-                      | _ -> ([], local_disk, global_disk, mem, ["Sub Error 3"]))
+                      | _ -> ([], local_disk, global_disk, mem, ["Error"]))
     | Mul content -> (let memory_length = count_length mem in
                       match content with
                       | Num 0 -> evaluation rest_of_command local_disk global_disk (Num(1) :: mem) log
@@ -718,6 +766,23 @@ let rec evaluation = fun (call_stack: program) (local_disk : env) (global_disk :
                                                                         | _ -> fun_result
                                                                         )
         | _ -> ([], local_disk, global_disk, mem, ["Error"]))
+    | TryE ele -> (let tryEResult = evaluation ele local_disk global_disk [] [] in
+                  match tryEResult with
+                  | res_stack, res_local, res_global, res_mem, res_log -> (if interp_helper res_log then (match res_mem with
+                                                                                                          |res_mem_h :: res_mem_t -> evaluation rest_of_command local_disk res_global (res_mem_h :: mem) log
+                                                                                                          | _ -> ([], local_disk, global_disk, mem, ["Error"]))
+                                                                          else evaluation rest_of_command local_disk res_global mem log
+                                                                          )
+                  )
+    | Switch ele -> (match mem with
+                    | Num match_for :: rest_mem -> (let match_command = switch_lookup match_for ele in
+                                        match match_command with
+                                        | None -> ([], local_disk, global_disk, mem, ["Error"])
+                                        | Some(matched_command) -> (let eval_res = evaluation matched_command local_disk global_disk rest_mem log in
+                                                                    match eval_res with
+                                                                    | res_call_stack, res_local, res_global, res_mem, res_log -> evaluation rest_of_command res_local res_global res_mem res_log)
+                                        )
+                    )
 
 let execute_program = fun src ->
   let parse_result = parse_code src in
@@ -729,14 +794,6 @@ let debug = fun src ->
   let debug_result = execute_program src in
   match debug_result with
   | _, _, res_global, res_mem, res_log -> (res_mem, res_log)
-
-
-let rec interp_helper = fun ls ->
-  match ls with
-  | [] -> true
-  | h::t -> match h with
-    | "Error" -> false
-    | _ -> interp_helper t
 
 
 (* TODO *)
