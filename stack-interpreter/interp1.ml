@@ -498,7 +498,7 @@ let rec trace_element = fun trace_from trace_to number ->
     match trace_from with
     | [] -> ([], [])
     | h::t -> match h with
-      | Num ele -> trace_element t (string_of_int ele :: trace_to) (number - 1)
+      | Num ele -> trace_element t ([string_of_int ele] @ trace_to) (number - 1)
       | Bool ele -> (match ele with
           | true -> trace_element t ("True" :: trace_to) (number - 1)
           | false -> trace_element t ("False" :: trace_to) (number - 1)
@@ -636,7 +636,7 @@ let rec evaluation = fun (call_stack: program) (local_disk : env) (global_disk :
                       match content with
                       | Num ele -> if memory_length < ele then ([], local_disk, global_disk, mem, ["Error"]) 
                         else evaluation rest_of_command local_disk global_disk (pop_element mem ele) log
-                      | _ -> ([], local_disk, global_disk, mem, ["Error"])
+                      | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
                      )
     | Trace content -> (let memory_length = count_length mem in
                         match content with
@@ -644,7 +644,7 @@ let rec evaluation = fun (call_stack: program) (local_disk : env) (global_disk :
                                       else match trace_element mem log ele with
                                         | mem_after, log_after -> evaluation rest_of_command local_disk global_disk mem_after log_after
                                      )
-                        | _ -> ([], local_disk, global_disk, mem, ["Error"])
+                        | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
                        )
     | Add content -> (let memory_length = count_length mem in
                       match content with
@@ -656,7 +656,7 @@ let rec evaluation = fun (call_stack: program) (local_disk : env) (global_disk :
                                                                              evaluation rest_of_command local_disk global_disk (Num(add_result)::result_memory) log
                                                                            else ([], local_disk, global_disk, mem, ["Error"]))
                                    )
-                      | _ -> ([], local_disk, global_disk, mem, ["Error"])
+                      | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
                      )
     | Sub content -> (let memory_length = count_length mem in
                       match content with
@@ -668,7 +668,7 @@ let rec evaluation = fun (call_stack: program) (local_disk : env) (global_disk :
                                                                              evaluation rest_of_command local_disk global_disk (Num(sub_result)::result_memory) log
                                                                            else ([], local_disk, global_disk, mem, ["Error"]))
                                    )
-                      | _ -> ([], local_disk, global_disk, mem, ["Error"]))
+                      | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"]))
     | Mul content -> (let memory_length = count_length mem in
                       match content with
                       | Num 0 -> evaluation rest_of_command local_disk global_disk (Num(1) :: mem) log
@@ -677,43 +677,43 @@ let rec evaluation = fun (call_stack: program) (local_disk : env) (global_disk :
                                       | result_memory, operation_stack -> (if only_number operation_stack then 
                                                                              let mul_result = mul_numbers operation_stack in
                                                                              evaluation rest_of_command local_disk global_disk (Num(mul_result)::result_memory) log
-                                                                           else ([], local_disk, global_disk, mem, ["Error"]))
+                                                                           else (rest_of_command, local_disk, global_disk, mem, ["Error"]))
                                    )
-                      | _ -> ([], local_disk, global_disk, mem, ["Error"]))
+                      | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"]))
     | Div content -> (let memory_length = count_length mem in
                       match content with
                       | Num 0 -> evaluation rest_of_command local_disk global_disk (Num(1) :: mem) log
-                      | Num ele -> (if memory_length < ele then ([], local_disk, global_disk, mem, ["Error"])
+                      | Num ele -> (if memory_length < ele then (rest_of_command, local_disk, global_disk, mem, ["Error"])
                                     else match fetch_for_operation mem [] ele with 
                                       | result_memory, operation_stack -> (if only_number operation_stack then 
                                                                              let div_result = div_number operation_stack in
                                                                              if div_result == -1 then ([], local_disk, global_disk, mem, ["Error"]) else 
                                                                                evaluation rest_of_command local_disk global_disk (Num(div_result)::result_memory) log
-                                                                           else ([], local_disk, global_disk, mem, ["Error"]))
+                                                                           else (rest_of_command, local_disk, global_disk, mem, ["Error"]))
                                    )
-                      | _ -> ([], local_disk, global_disk, mem, ["Error"]))
+                      | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"]))
     | And -> (match mem with
         | Bool ele1 :: Bool ele2 :: rest_stack -> evaluation rest_of_command local_disk global_disk (Bool (ele1 && ele2) :: rest_stack) log 
-        | _ -> ([], local_disk, global_disk, mem, ["Error"])
+        | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
       )
     | Or -> (match mem with
         | Bool ele1 :: Bool ele2 :: rest_stack -> evaluation rest_of_command local_disk global_disk (Bool (ele1 || ele2) :: rest_stack) log 
-        | _ -> ([], local_disk, global_disk, mem, ["Error"])
+        | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
       )
     | Equal -> (match mem with
         | Num ele1 :: Num ele2 :: rest_stack -> evaluation rest_of_command local_disk global_disk (Bool (ele1 == ele2) :: rest_stack) log
-        | _ -> ([], local_disk, global_disk, mem, ["Error"])
+        | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
       )
     | Lte -> (match mem with
         | Num ele1 :: Num ele2 :: rest_stack -> evaluation rest_of_command local_disk global_disk (Bool (ele1 <= ele2) :: rest_stack) log 
-        | _ -> ([], local_disk, global_disk, mem, ["Error"])
+        | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
       )
     | Local -> (match mem with
         | Name ele1 :: ele2 :: rest_stack -> evaluation rest_of_command ((Name ele1, ele2)::local_disk) global_disk (U :: rest_stack) log 
-        | _ -> ([], local_disk, global_disk, mem, ["Error"]))
+        | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"]))
     | Global -> (match mem with
         | Name ele1 :: ele2 :: rest_stack -> evaluation rest_of_command local_disk ((Name ele1, ele2) :: global_disk) (U :: rest_stack) log 
-        | _ -> ([], local_disk, global_disk, mem, ["Error"]))
+        | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"]))
     | Lookup -> (match mem with
         | Name ele :: rest_stack -> (let value = lookup_helper ele local_disk in
                                      match value with
@@ -721,67 +721,64 @@ let rec evaluation = fun (call_stack: program) (local_disk : env) (global_disk :
                                      | None -> ( let value_2 = lookup_helper ele global_disk in
                                                  match value_2 with
                                                  | Some(found) -> evaluation rest_of_command local_disk global_disk (found :: rest_stack) log 
-                                                 | None -> ([], local_disk, global_disk, mem, ["Lookup Error"])
+                                                 | None -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
                                                )
                                     )
-        | _ -> ([], local_disk, global_disk, mem, ["Error"]))
-    | Bgend ele -> ( let result = evaluation ele local_disk global_disk [] [] in
+        | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"]))
+    | Bgend ele -> ( let result = evaluation ele local_disk global_disk [] log in
                      match result with
-                     | _, _, _, _, ["Error"] -> ([], [], [], [], ["Error"])
-                     | _, _, inner_global_disk, inner_stack_h::inner_stack_t, inner_log -> evaluation rest_of_command local_disk (inner_global_disk @ global_disk) (inner_stack_h :: mem) (inner_log @ log)
-                     | _, _, inner_global_disk, [], inner_log -> ([], [], [], [], ["Error"])
+                     | _, _, _, _, ["Error"] -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
+                     | _, _, inner_global_disk, inner_stack_h::inner_stack_t, inner_log -> evaluation rest_of_command local_disk (inner_global_disk @ global_disk) (inner_stack_h :: mem) inner_log
+                     | _, _, inner_global_disk, [], inner_log -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
 
                    )
     | Condition (if_true, if_false) -> (match mem with
-        | Bool true :: rest_stack -> (let result = evaluation if_true local_disk global_disk rest_stack []  in
+        | Bool true :: rest_stack -> (let result = evaluation if_true local_disk global_disk rest_stack log  in
                                       match result with
-                                      | if_stack, if_local_disk, if_global_disk, if_mem, if_log -> evaluation rest_of_command (if_local_disk @ local_disk) (if_global_disk @ global_disk) if_mem (if_log @ log) )
-        | Bool false :: rest_stack -> (let result = evaluation if_false local_disk global_disk rest_stack []  in
+                                      | if_stack, if_local_disk, if_global_disk, if_mem, if_log -> evaluation rest_of_command (if_local_disk @ local_disk) (if_global_disk @ global_disk) if_mem if_log )
+        | Bool false :: rest_stack -> (let result = evaluation if_false local_disk global_disk rest_stack log  in
                                        match result with
-                                       | if_stack, if_local_disk, if_global_disk, if_mem, if_log -> evaluation rest_of_command (if_local_disk @ local_disk) (if_global_disk @ global_disk) if_mem (if_log @ log) )
-        | _ ->  ([], local_disk, global_disk, mem, ["Error"])
+                                       | if_stack, if_local_disk, if_global_disk, if_mem, if_log -> evaluation rest_of_command (if_local_disk @ local_disk) (if_global_disk @ global_disk) if_mem if_log )
+        | _ ->  (rest_of_command, local_disk, global_disk, mem, ["Error"])
       ) 
     | Not -> (match mem with
         | Bool ele :: rest_stack -> evaluation rest_of_command local_disk global_disk (Bool (not ele) :: rest_stack) log 
-        | _ -> ([], local_disk, global_disk, mem, ["Error"])
+        | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
       )
     | Func (fName, fArg, fBody) -> evaluation rest_of_command ((fName, Fun(fArg, fBody, local_disk ))::local_disk) global_disk mem log
     | Call -> (match mem with
-        | Name fName :: fArgValue :: rest_stack -> (let found = lookup_helper fName local_disk in
-                                match found with
-                                | None -> ([], local_disk, global_disk, mem, ["Call Error 1"])
-                                | Some(Fun(fArgName, fCommand, fEnv)) -> (let fun_result = evaluation fCommand ((fArgName, fArgValue) :: fEnv @ local_disk) global_disk [] log in
-                                                                        match fun_result with
-                                                                        | _, _, _, _, ["Error"] -> ([], local_disk, global_disk, mem, ["Call Error 2"])
-                                                                        | res_call_stack, res_local_disk, res_global_disk, res_mem, res_log -> (match res_mem with
-                                                                                                                                                | [] -> ([], local_disk, global_disk, mem, ["Call Error 3"])
-                                                                                                                                                | res_mem_h :: res_mem_t -> evaluation rest_of_command local_disk res_global_disk (res_mem_h :: rest_stack) res_log)
-                                                                        )
-                                )
-        | Fun (fArgName, fCommand, fEnv) :: fArgValue :: rest_stack -> (let fun_result = evaluation fCommand ((fArgName, fArgValue) :: fEnv @ local_disk) global_disk [] log in
+        | Fun (fArgName, fCommand, fEnv) :: fArgValue :: rest_stack -> (let fun_result = evaluation fCommand ((fArgName, fArgValue) :: local_disk @ fEnv) global_disk [] log in
                                                                         match fun_result with
                                                                         |  res_call_stack, res_local_disk, res_global_disk, res_mem, res_log -> (match res_mem with
-                                                                                                                                                | [] -> ([], local_disk, global_disk, mem, ["Call Error 5"])
-                                                                                                                                                | res_mem_h :: res_mem_t -> evaluation rest_of_command local_disk res_global_disk (res_mem_h :: rest_stack) res_log)
-                                                                        | _ -> fun_result
+                                                                                                                                                | [] -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
+                                                                                                                                                | res_mem_h :: res_mem_t -> (evaluation rest_of_command local_disk res_global_disk (res_mem_h :: rest_stack) res_log))
+                                                                        | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
                                                                         )
-        | _ -> ([], local_disk, global_disk, mem, ["Error"]))
-    | TryE ele -> (let tryEResult = evaluation ele local_disk global_disk [] [] in
+        | fArgValue :: Fun (fArgName, fCommand, fEnv) :: rest_stack -> (let fun_result = evaluation fCommand ((fArgName, fArgValue) :: fEnv) global_disk [] log in
+                                                                        match fun_result with
+                                                                        |  res_call_stack, res_local_disk, res_global_disk, res_mem, res_log -> (match res_mem with
+                                                                                                                                                | [] -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
+                                                                                                                                                | res_mem_h :: res_mem_t -> evaluation rest_of_command local_disk res_global_disk (res_mem_h :: rest_stack) res_log)
+                                                                        | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
+                                                                        )
+        | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"]))
+    | TryE ele -> (let tryEResult = evaluation ele local_disk global_disk [] log in
                   match tryEResult with
                   | res_stack, res_local, res_global, res_mem, res_log -> (if interp_helper res_log then (match res_mem with
-                                                                                                          |res_mem_h :: res_mem_t -> evaluation rest_of_command local_disk res_global (res_mem_h :: mem) log
-                                                                                                          | _ -> ([], local_disk, global_disk, mem, ["Error"]))
+                                                                                                          |res_mem_h :: res_mem_t -> evaluation rest_of_command local_disk res_global (res_mem_h :: mem) res_log
+                                                                                                          | _ -> ([], [], [], [], ["Error"]))
                                                                           else evaluation rest_of_command local_disk res_global mem log
                                                                           )
                   )
     | Switch ele -> (match mem with
                     | Num match_for :: rest_mem -> (let match_command = switch_lookup match_for ele in
                                         match match_command with
-                                        | None -> ([], local_disk, global_disk, mem, ["Error"])
+                                        | None -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
                                         | Some(matched_command) -> (let eval_res = evaluation matched_command local_disk global_disk rest_mem log in
                                                                     match eval_res with
                                                                     | res_call_stack, res_local, res_global, res_mem, res_log -> evaluation rest_of_command res_local res_global res_mem res_log)
                                         )
+                    | _ -> (rest_of_command, local_disk, global_disk, mem, ["Error"])
                     )
 
 let execute_program = fun src ->
@@ -790,10 +787,11 @@ let execute_program = fun src ->
   | None -> ([], [], [], [], ["Error"])
   | Some(x,y) -> evaluation x [] [] [] []
 
+
 let debug = fun src -> 
-  let debug_result = execute_program src in
-  match debug_result with
-  | _, _, res_global, res_mem, res_log -> (res_mem, res_log)
+match execute_program src with
+| (res_call_stack, res_local_disk, res_global_disk, res_mem, res_log) -> res_global_disk
+  
 
 
 (* TODO *)
