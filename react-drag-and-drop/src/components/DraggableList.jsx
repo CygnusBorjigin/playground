@@ -85,7 +85,6 @@ const DraggebleList = () => {
     return(
         <div className="mt-20 flex flex-row justify-center font-raleway font-bold text-xl w-screen">
             <ul className="w-1/3">
-                {console.log(itemOrder)}
             {itemOrder.map(each_item => {
                 return(
                     <li
@@ -93,7 +92,7 @@ const DraggebleList = () => {
                         draggable="true"
                         value={each_item.id}
                         key = {uuidv4()}
-                        onDragStart={handelDragStart}
+                        onDrag={handelDragStart}
                         onDrop={handelDrop}
                         onDragOver={handelDragOver}
                     >
