@@ -19,7 +19,6 @@ const DraggebleList = () => {
             {
                 value: each_item,
                 sortIndex: Math.random(),
-                id: uuidv4(),
             }
         )
     })
@@ -28,13 +27,18 @@ const DraggebleList = () => {
         return(
             {
                 value: each_item.value,
-                id: each_item.id,
+                id: uuidv4(),
                 index
             }
         )
     });
 
     const [itemOrder, setItemOrder] = useState(displayOrder);
+    const [itemBeingDragged, setItemBeingDragged] = useState("");
+
+    const handelDragStart = (event) => {
+        setItemBeingDragged(event.target.getAttribute("value"));
+    }
 
     return(
         <div className="mt-20 flex flex-row justify-center font-raleway font-bold text-xl w-screen">
@@ -44,7 +48,9 @@ const DraggebleList = () => {
                     <li
                         className="border-2 mt-4 text-center h-16 flex flex-col justify-center"
                         draggable="true"
+                        value={each_item.id}
                         key = {uuidv4()}
+                        onDragStart={handelDragStart}
                     >
                         {each_item.value}
                     </li>
