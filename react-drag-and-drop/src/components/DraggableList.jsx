@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const DraggebleList = () => {
     const correctOrderedList = [
@@ -35,14 +35,57 @@ const DraggebleList = () => {
 
     const [itemOrder, setItemOrder] = useState(displayOrder);
     const [itemBeingDragged, setItemBeingDragged] = useState("");
+    const [itemBeingDropped, setItemBeingDropped] = useState("");
+
+    const handelSwapItem = (start, end) => {
+        const newList = itemOrder.map(eachItem => {
+            if (eachItem.index === start){
+                return {
+                    value: eachItem.value,
+                    id: eachItem.id,
+                    index: end
+                }
+            } else if (eachItem.index === end){
+                return {
+                    value: eachItem.value,
+                    id: eachItem.id,
+                    index: start
+                }
+            } else {
+                return {
+                    value: eachItem.value,
+                    id: eachItem.id,
+                    index: eachItem.index
+                }
+            }
+        })
+        setItemOrder(newList.sort((a, b) => a.index - b.index));
+        setItemBeingDragged("");
+        setItemBeingDropped("");
+    }
+
+    useEffect(() => {
+        const startIndex = itemOrder.find(eachItem => eachItem.id === itemBeingDragged);
+        const endIndex = itemOrder.find(eachItem => eachItem.id === itemBeingDropped);
+        if (startIndex && endIndex) handelSwapItem(startIndex.index, endIndex.index);
+    }, [itemBeingDropped]);
 
     const handelDragStart = (event) => {
         setItemBeingDragged(event.target.getAttribute("value"));
     }
 
+    const handelDrop = (event) => {
+        setItemBeingDropped(event.target.getAttribute("value"));
+    };
+
+    const handelDragOver = (event) => {
+        event.preventDefault();
+    }
+
     return(
         <div className="mt-20 flex flex-row justify-center font-raleway font-bold text-xl w-screen">
             <ul className="w-1/3">
+                {console.log(itemOrder)}
             {itemOrder.map(each_item => {
                 return(
                     <li
@@ -51,6 +94,8 @@ const DraggebleList = () => {
                         value={each_item.id}
                         key = {uuidv4()}
                         onDragStart={handelDragStart}
+                        onDrop={handelDrop}
+                        onDragOver={handelDragOver}
                     >
                         {each_item.value}
                     </li>
