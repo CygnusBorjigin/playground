@@ -5,7 +5,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        'biz': ['BIZ UDPGothic', 'sans-serif']
+        'biz': ['BIZ UDPGothic', 'sans-serif'],
+        'raleway': ['Raleway', 'sans-serif']
       }
     },
   },
