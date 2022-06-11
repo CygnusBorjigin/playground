@@ -7,11 +7,11 @@
 
 * {
     box-sizing: border-box;
+    font-family: 'Macondo', 'sans-serif';
 }
 
 body {
     background-color: #f9fafb;
-    font-family: 'Macondo', 'sans-serif';
     display: flex;
     align-items: center;
     justify-content: center;
@@ -53,7 +53,6 @@ h2 {
     width: 100%;
     padding: 10px;
     font-size: 14px;
-    font-family: 'Macondo', 'sans-serif';
 }
 
 .form-control input:focus {
@@ -86,7 +85,7 @@ h2 {
 .form button {
     cursor: pointer;
     background-color: #3498db;
-    border: 2px solid;
+    border: 0px solid;
     border-radius: 4px;
     color: white;
     display: block;
@@ -94,8 +93,10 @@ h2 {
     padding: 20px;
     margin-top: 20px;
     width: 100%;
+    box-shadow: 0 5px 5px rgba(0, 0, 0, 0.3);
 }
 
 .form button:hover {
     background-color: #2e85bf;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
