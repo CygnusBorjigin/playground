@@ -1,0 +1,126 @@
+@import url('https://fonts.googleapis.com/css2?family=Amatic+SC&family=Shadows+Into+Light&display=swap');
+
+body {
+    margin: 0;
+}
+
+ul {
+    font-family: 'Amatic SC', cursive;
+    width: 100 vw;
+    display: flex;
+    justify-content: space-between;
+    list-style: none;
+    padding: 5px 10px;
+    border-bottom: 2px solid gray;
+}
+
+li:nth-child(1) {
+    margin-top: 13px;
+    font-size: 15px;
+}
+
+li:nth-child(2) {
+    font-size: 30px;
+}
+
+li:nth-child(3) {
+    margin-top: 10px;
+}
+
+hr {
+    width: 100vw;
+}
+
+.container {
+    font-family: 'Shadows Into Light', cursive;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.container p {
+    padding-bottom: 30px;
+    border-bottom: 1px dashed gray;
+}
+
+.nav {
+    display: flex;
+    margin: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    background-color: aliceblue;
+    transform: translateX(-100%);
+}
+
+.nav ul {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 0;
+}
+
+.nav ul li {
+    font-size: 15px;
+    margin: 50px 5px;
+    border-bottom: 2px solid gray;
+}
+
+.nav ul li:hover {
+    cursor: pointer;
+}
+
+.modalcontainer {
+    background-color: rgba(0, 0, 0, 0.6);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    display: none;
+}
+
+.modal {
+    background-color: azure;
+    border-radius: 5px;
+    padding: 20px;
+    width: 50%;
+    height: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    font-family: 'Amatic SC', cursive;
+}
+
+.modal-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content div {
+    margin-top: 20px;
+}
+
+.modal-form div input {
+    margin-left: 8px;
+    font-family: 'Shadows Into Light', cursive;
+}
+
+.modal button {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 30px;
+    background: transparent;
+    border: 1px solid black;
+    border-radius: 5px;
+}
