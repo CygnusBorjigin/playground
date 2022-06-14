@@ -1,0 +1,91 @@
+body {
+    background-color: #34495e;
+    color: aliceblue;
+}
+
+.figure-container {
+    fill: transparent;
+    stroke: aliceblue;
+    stroke-width: 4px;
+}
+
+.top-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.display-container {
+    margin-top: 50px;
+    width: 50vh;
+    display: flex;
+    justify-content: space-between;
+}
+
+.input-container {
+    margin-top: 50px;
+    width: 50vw;
+    display: flex;  
+    justify-content: center;
+}
+
+.input-container span {
+    font-size: 20px;
+    margin: 0 10px;
+    padding: 5px 10px;
+    border-bottom: 2px solid navy;
+}
+
+.popup-container {
+    display: none;
+}
+
+.popup-container.show-popup {
+    background-color: rgba(0, 0, 0, 0.6);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.popup {
+    background-color: cornflowerblue;
+    width: 30vw;
+    height: 30vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-radius: 20px;
+}
+
+.popup button {
+    background: transparent;
+    padding: 10px 15px;
+    border: 2px solid aliceblue;
+    border-radius: 10px;
+    color: aliceblue;
+}
+
+.popup button:hover {
+    background-color: aliceblue;
+    color: #34495e;
+}
+
+.warning {
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 5px 20px;
+    border-radius: 10px;
+    text-align: center;
+    width: 30%;
+    position: absolute;
+    bottom: -100%;
+}
+
+.hide {
+    display: none;
+}

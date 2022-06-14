@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Word Guess</title>
+</head>
+<body>
+    <div class="top-container">
+        <h1>Word Guess</h1>
+        <h3>Guess the hidden word by typing the letters</h3>
+        <div class="display-container">
+            <svg height="350" width="200" class="figure-container">
+                <line x1="60" y1="20" x2="200" y2="20" class="box1"/>
+                <line x1="60" y1="60" x2="200" y2="60" class="box1"/>
+                <line x1="60" y1="20" x2="60" y2="60" class="box1"/>
+                <line x1="200" y1="20" x2="200" y2="60" class="box1"/>
+                
+                <line x1="60" y1="80" x2="200" y2="80" class="box2"/>
+                <line x1="60" y1="120" x2="200" y2="120" class="box2"/>
+                <line x1="60" y1="80" x2="60" y2="120" class="box2"/>
+                <line x1="200" y1="80" x2="200" y2="120" class="box2"/>
+        
+                <line x1="60" y1="140" x2="200" y2="140" class="box3"/>
+                <line x1="60" y1="180" x2="200" y2="180" class="box3"/>
+                <line x1="60" y1="140" x2="60" y2="180" class="box3"/>
+                <line x1="200" y1="140" x2="200" y2="180" class="box3"/>
+        
+                <line x1="60" y1="200" x2="200" y2="200" class="box4"/>
+                <line x1="60" y1="240" x2="200" y2="240" class="box4"/>
+                <line x1="60" y1="200" x2="60" y2="240" class="box4"/>
+                <line x1="200" y1="200" x2="200" y2="240" class="box4"/>
+        
+                <line x1="60" y1="260" x2="200" y2="260" class="box5"/>
+                <line x1="60" y1="300" x2="200" y2="300" class="box5"/>
+                <line x1="60" y1="260" x2="60" y2="300" class="box5"/>
+                <line x1="200" y1="260" x2="200" y2="300" class="box5"/>
+            </svg>
+            <div class="wong-letters" id="wrongLetters">
+                <p>Wrong Letters</p>
+            </div>
+        </div>
+        <div class="input-container" id="inputContainer">
+        </div>
+        <div class="warning" id="warning">
+            <p>you have already tried this letter</p>
+        </div>
+    </div>
+
+    <div class="popup-container" id="popup-container">
+        <div class="popup" id="popup">
+            <h1 id="finalMessage">You Win</h1>
+            <button>Play again</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
